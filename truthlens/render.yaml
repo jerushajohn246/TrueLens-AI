@@ -1,0 +1,26 @@
+# Render Blueprint - push this repo to GitHub, then in Render: New + > Blueprint > select the repo.
+services:
+  - type: web
+    name: truthlens
+    runtime: docker
+    plan: free            # free works for images/short videos; use "starter" for longer videos or Whisper
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: MAX_UPLOAD_MB
+        value: "40"
+      - key: MAX_VIDEO_SECONDS
+        value: "60"
+      - key: ENABLE_WHISPER
+        value: "1"
+      - key: WHISPER_MODEL
+        value: tiny
+      - key: TRUTHLENS_SECRET      # signing key for tamper-proof report seals
+        generateValue: true
+    # Free instances have an ephemeral disk (history is cleared on redeploy/sleep).
+    # On a paid plan, uncomment to keep uploads, evidence and history:
+    # disk:
+    #   name: truthlens-data
+    #   mountPath: /app/data
+    #   sizeGB: 1

@@ -1,0 +1,16 @@
+Use these captions in the 'Claim / caption' box during the demo:
+
+edited_photo.jpg:
+  This photo was taken today at our campus in Bangalore.
+
+manipulated_talking.mp4:
+  This video was recorded today at the university. The speaker said "we will close the campus tomorrow".
+
+animated_avatar.mp4:
+  Recorded on 18 November 2026 during the hackathon. Source: team camera
+
+ai_generated_portrait.png:
+  Real photo of our new student taken on campus.
+
+old_news_screenshot.jpg:
+  Flood in Delhi today! Share fast.

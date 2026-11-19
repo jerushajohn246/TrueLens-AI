@@ -1,0 +1,3 @@
+# Optional: speech-to-text (transcripts, quote-in-audio check, caption-vs-speech check).
+# Adds ~150 MB and downloads the Whisper "tiny" model (~75 MB) on first use.
+faster-whisper==1.1.0

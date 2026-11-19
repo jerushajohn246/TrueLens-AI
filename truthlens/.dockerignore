@@ -1,0 +1,11 @@
+.venv
+venv
+data
+samples
+tests
+__pycache__
+*.pyc
+.git
+.vscode
+*.md
+training_data

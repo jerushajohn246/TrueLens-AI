@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TruthLens — Verify report</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    main { max-width: 860px; }
+    .banner { display: flex; gap: 16px; align-items: center; padding: 18px 20px; border-radius: 14px; margin-bottom: 18px; border: 1px solid; }
+    .banner.ok { background: rgba(34,197,94,.1); border-color: rgba(34,197,94,.45); }
+    .banner.bad { background: rgba(239,68,68,.1); border-color: rgba(239,68,68,.5); }
+    .banner .big { font-size: 2.4rem; }
+    .banner h2 { margin: 0; }
+    .check { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+    .check .ic { font-size: 1.2rem; width: 26px; text-align: center; }
+    .check .d { color: var(--muted); font-size: .84rem; }
+    .upl { border: 2px dashed #34405f; border-radius: 12px; padding: 18px; text-align: center; cursor: pointer; margin-top: 8px; }
+    .upl:hover { border-color: var(--accent); }
+    .res { margin-top: 10px; padding: 10px 12px; border-radius: 10px; font-size: .9rem; }
+    .res.ok { background: rgba(34,197,94,.1); color: #b6f0c9; } .res.bad { background: rgba(239,68,68,.12); color: #fecaca; }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/"><svg viewBox="0 0 64 64" width="30" height="30"><circle cx="28" cy="28" r="18" fill="none" stroke="currentColor" stroke-width="6"/><line x1="41" y1="41" x2="58" y2="58" stroke="currentColor" stroke-width="7" stroke-linecap="round"/></svg><span>Truth<b>Lens</b></span></a>
+    <nav><a href="/">Home</a></nav>
+  </header>
+  <main>
+    <h1 style="margin-top:6px">🔏 Report verification</h1>
+    <p class="muted">Independent, live check that a TruthLens forensic report and its evidence have not been altered since they were sealed.</p>
+    <div id="out" class="card"><p class="muted">Checking…</p></div>
+
+    <section class="card">
+      <h2>Is this the same evidence file?</h2>
+      <p class="muted" style="font-size:.88rem">Upload a file to compare its SHA-256 fingerprint with the analysed original. A change of even one pixel gives a different hash. The file is only hashed, not stored.</p>
+      <div class="upl" id="fdrop">Click to choose an image / video / audio file<input type="file" id="ffile" hidden /></div>
+      <div id="fres"></div>
+    </section>
+
+    <section class="card">
+      <h2>Was this JSON report edited?</h2>
+      <p class="muted" style="font-size:.88rem">Upload a downloaded <span class="mono">TruthLens_Report_*.json</span>. Its content is re-hashed and checked against the signed seal inside it.</p>
+      <div class="upl" id="jdrop">Click to choose a .json report<input type="file" id="jfile" accept=".json,application/json" hidden /></div>
+      <div id="jres"></div>
+    </section>
+  </main>
+  <footer class="footer">TruthLens integrity seal · SHA-256 hash chain + HMAC-SHA256 signature</footer>
+<script>
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const aid = location.pathname.split("/").filter(Boolean).pop();
+const qs = location.search;
+
+async function load() {
+  const out = document.getElementById("out");
+  try {
+    const r = await (await fetch(`/api/analyses/${aid}/verify${qs}`)).json();
+    if (!r.found) { out.innerHTML = `<div class="banner bad"><div class="big">⚠</div><div><h2>Analysis not found</h2><p>${esc(r.checks[0].detail)}</p></div></div>`; return; }
+    out.innerHTML = `
+      <div class="banner ${r.overall ? "ok" : "bad"}"><div class="big">${r.overall ? "✅" : "❌"}</div>
+        <div><h2>${r.overall ? "Verified — report and evidence are intact" : "Verification FAILED — something was altered"}</h2>
+        <div class="muted">Analysis <span class="mono">${esc(r.analysis_id)}</span> · created ${esc(r.created_at)} · risk ${r.risk_score}/100 (${esc(r.risk_label)})</div></div></div>
+      ${r.checks.map((c) => `<div class="check"><div class="ic">${c.ok ? "✅" : "❌"}</div><div><b>${esc(c.name)}</b><div class="d">${esc(c.detail)}</div></div></div>`).join("")}
+      <h3 style="margin-top:18px">Seal history</h3>
+      <table class="tbl"><thead><tr><th>Version</th><th>Sealed (UTC)</th><th>Reason</th><th>Report SHA-256</th></tr></thead>
+      <tbody>${r.seal_versions.map((s) => `<tr><td>v${s.version}</td><td>${esc(s.sealed_at)}</td><td>${esc(s.reason)}</td><td class="mono">${esc(s.report_sha256.slice(0, 24))}…</td></tr>`).join("")}</tbody></table>
+      <h3 style="margin-top:18px">Evidence fingerprints</h3>
+      ${r.files.map((f) => `<div class="check"><div class="ic">📄</div><div><b>${esc(f.filename)}</b><div class="d mono">${esc(f.sha256)}</div></div></div>`).join("")}
+      <p style="margin-top:14px"><a class="btn sm" href="/#/analysis/${esc(r.analysis_id)}">Open full report</a></p>`;
+  } catch (e) { out.innerHTML = `<p>Verification service unavailable: ${esc(e.message)}</p>`; }
+}
+
+function hook(dropId, inputId, resId, url, field, render) {
+  const d = document.getElementById(dropId), i = document.getElementById(inputId);
+  d.addEventListener("click", () => i.click());
+  i.addEventListener("change", async () => {
+    if (!i.files[0]) return;
+    const fd = new FormData(); fd.append(field, i.files[0]);
+    document.getElementById(resId).innerHTML = `<div class="res">Checking…</div>`;
+    try { const r = await (await fetch(url, { method: "POST", body: fd })).json(); document.getElementById(resId).innerHTML = render(r); }
+    catch (e) { document.getElementById(resId).innerHTML = `<div class="res bad">${esc(e.message)}</div>`; }
+    i.value = "";
+  });
+}
+hook("fdrop", "ffile", "fres", `/api/analyses/${aid}/verify-file`, "file",
+  (r) => `<div class="res ${r.match ? "ok" : "bad"}">${r.match ? "✅" : "❌"} ${esc(r.detail)}<div class="mono" style="font-size:.75rem;margin-top:4px">SHA-256 ${esc(r.sha256)}</div></div>`);
+hook("jdrop", "jfile", "jres", `/api/verify-report`, "file",
+  (r) => `<div class="res ${r.ok ? "ok" : "bad"}">${r.ok ? "✅" : "❌"} ${esc(r.detail || "")}
+     ${r.computed_sha256 ? `<div class="mono" style="font-size:.75rem;margin-top:4px">computed ${esc(r.computed_sha256.slice(0, 32))}…<br>sealed&nbsp;&nbsp; ${esc((r.sealed_sha256 || "").slice(0, 32))}…</div>` : ""}
+     ${r.known_to_server !== undefined ? `<div style="font-size:.8rem;margin-top:4px">${r.known_to_server ? "Seal is registered on this server." : "Seal is NOT registered on this server."}</div>` : ""}</div>`);
+load();
+</script>
+</body>
+</html>

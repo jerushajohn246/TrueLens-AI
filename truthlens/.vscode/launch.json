@@ -1,0 +1,30 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "TruthLens: run server (debug)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["app.main:app", "--reload", "--port", "8000"],
+      "jinja": true,
+      "justMyCode": true,
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "TruthLens: generate demo samples",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/scripts/make_demo_samples.py",
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "TruthLens: run tests",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": ["-q", "tests"],
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}
